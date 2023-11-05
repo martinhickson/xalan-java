@@ -44,9 +44,7 @@ rem harmless.
 echo "Generate XSLTC Architectural documentation"
 java -cp %stylebook_class_path% %doc_generator% loaderConfig=sbk:/style/loaderdesign.xml targetDirectory=.\target\site\xsltc\ .\stylebook\sources\xsltc.xml .\stylebook\style
 
-rem NOTE; Ditto re loaderdesign.
-echo "Generate xalan-jlocal documentation"
-java -cp %stylebook_class_path% %doc_generator% loaderConfig=sbk:/style/loaderdesign.xml targetDirectory=.\target\site\xalan\local .\stylebook\sources\xalan-jlocal.xml .\stylebook\style
+rem xalan/local/* was just a copy of xalan/*. Drop generation thereof.
 
 echo "autodocs equivalent"
 mkdir .\target\site\xalan
