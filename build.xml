@@ -326,8 +326,9 @@ $Id$
          the tests-available property set for them.
     -->
     <available file="${test.relpath}" property="tests-available" />
-    <available property="xerces.present" 
-      classname="org.apache.xerces.parsers.SAXParser"/>
+    <available property="xerces.present"
+      classname="org.apache.xerces.parsers.SAXParser"
+      classpathref="compile.class.path"/>
       
     <!-- Update version information.  This copies the Version.src
          file into Version.java, while replacing the following tokens
@@ -377,6 +378,8 @@ $Id$
   <!-- =================================================================== -->
     <target name="xml.compile" depends="prepare,serializer.jar">
     <echo message="Compiling DTM implementation and utilities" />
+    <fail unless="xerces.present"
+      message="xercesImpl is required to compile IncrementalSAXSource_Xerces (${parser.jar})"/>
     <javac srcdir="${src.dir}"
            destdir="${build.classes}"
            debug="${build.debug}" 
@@ -384,10 +387,7 @@ $Id$
     	   nowarn="${compiler.nowarn}">
       <include name="${apachexml.reldir}/**/*.java" />
       <!-- exclude the serializer -->
-      <exclude name="${serializer.reldir}/**/*.java" />      
-      <!-- Exclude file that depends upon presence of Xerces in build path -->
-      <exclude name="**/IncrementalSAXSource_Xerces.java" 
-        unless="xerces.present"	 />
+      <exclude name="${serializer.reldir}/**/*.java" />
       <classpath refid="compile.class.path" />
       <bootclasspath refid="xslt.boot.class.path" />
     </javac>

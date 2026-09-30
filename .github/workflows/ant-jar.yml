@@ -1,0 +1,36 @@
+name: Ant jar
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - xalan-j_2_7_1_maint
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ant jar (Java 8)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+
+      - name: Build the bundled xalan.jar
+        # Fails if lib/endorsed/xercesImpl.jar is missing. That jar is
+        # required to compile IncrementalSAXSource_Xerces.
+        run: ant jar
+
+      - name: Upload xalan.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: xalan-jar
+          path: build/xalan.jar
+          if-no-files-found: error
