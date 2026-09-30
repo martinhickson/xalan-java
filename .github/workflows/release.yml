@@ -227,15 +227,28 @@ jobs:
       - name: Publish to GitHub Packages
         if: inputs.deploy_to_github_packages
         run: |
+          set +e
           mvn -B -ntp deploy:deploy-file \
             -Dfile="build/${ARTIFACT_ID}-${RELEASE_VERSION}.jar" \
             -DpomFile="build/${ARTIFACT_ID}-${RELEASE_VERSION}.pom" \
             -DrepositoryId=github-packages \
-            -Durl="https://maven.pkg.github.com/${{ github.repository }}"
+            -Durl="https://maven.pkg.github.com/${{ github.repository }}" \
+            > /tmp/deploy.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/deploy.log
+          if [ "$code" -ne 0 ]; then
+            if grep -Eqi '409|already exists|Conflict|cannot be updated' /tmp/deploy.log; then
+              echo "::warning::${ARTIFACT_ID} ${RELEASE_VERSION} is already on GitHub Packages."
+            else
+              exit "$code"
+            fi
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Validate Maven Central configuration
+        id: central
         if: inputs.deploy_to_maven_central
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -243,12 +256,16 @@ jobs:
           MAVEN_CENTRAL_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY }}
         run: |
           if [ -z "$MAVEN_CENTRAL_USERNAME" ] || [ -z "$MAVEN_CENTRAL_PASSWORD" ] || [ -z "$MAVEN_CENTRAL_GPG_PRIVATE_KEY" ]; then
-            echo "::error::Maven Central publishing is not configured for this repository."
-            exit 1
+            echo "::warning::Maven Central secrets are not set on this repository. Skipping Central publish."
+            echo "publish=false" >> "${GITHUB_OUTPUT}"
+            echo "PUBLISH_CENTRAL=false" >> "${GITHUB_ENV}"
+            exit 0
           fi
+          echo "publish=true" >> "${GITHUB_OUTPUT}"
+          echo "PUBLISH_CENTRAL=true" >> "${GITHUB_ENV}"
 
       - name: Configure Maven Central credentials
-        if: inputs.deploy_to_maven_central
+        if: inputs.deploy_to_maven_central && steps.central.outputs.publish == 'true'
         env:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
@@ -261,14 +278,14 @@ jobs:
               </server>" ~/.m2/settings.xml
 
       - name: Import GPG signing key
-        if: inputs.deploy_to_maven_central
+        if: inputs.deploy_to_maven_central && steps.central.outputs.publish == 'true'
         env:
           MAVEN_CENTRAL_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY }}
         run: |
           echo "${MAVEN_CENTRAL_GPG_PRIVATE_KEY}" | gpg --batch --import --pinentry-mode loopback
 
       - name: Publish to Maven Central
-        if: inputs.deploy_to_maven_central
+        if: inputs.deploy_to_maven_central && steps.central.outputs.publish == 'true'
         env:
           MAVEN_CENTRAL_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_PASSPHRASE }}
         run: |
@@ -353,7 +370,7 @@ jobs:
             if [ "${{ inputs.deploy_to_github_packages }}" = "true" ]; then
               echo "- Published to GitHub Packages"
             fi
-            if [ "${{ inputs.deploy_to_maven_central }}" = "true" ]; then
+            if [ "${PUBLISH_CENTRAL}" = "true" ]; then
               echo "- Published to Maven Central under ${CENTRAL_GROUP_ID}"
             fi
             echo "EOF"
