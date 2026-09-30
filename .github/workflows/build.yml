@@ -1,4 +1,4 @@
-name: Ant jar
+name: Build
 
 on:
   workflow_dispatch:
