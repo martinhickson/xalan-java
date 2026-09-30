@@ -79,7 +79,7 @@ $Id$
   <property name="version.DEVELOPER"      value=""/><!-- Set this to 'D' if a developer release; blank "" if maintenance release -->
   <property name="version.MINOR"          value="3"/><!-- EITHER the developer release number, or a maintenance release number -->
   <property name="version"                value="${version.VERSION}_${version.RELEASE}_${version.DEVELOPER}${version.MINOR}"/><!-- GUMP: version # of dist file -->
-  <property name="impl.version"           value="${version.VERSION}.${version.RELEASE}.${version.DEVELOPER}${version.MINOR}"/><!-- Used in jar task for filtering MANIFEST.MF file -->
+  <property name="impl.version"           value="2.7.3-bravura-4"/><!-- Used in jar task for filtering MANIFEST.MF file -->
   
   <!-- Xerces Java version information -->
   <property name="parser.version.VERSION" value="2"/>
