@@ -23,25 +23,27 @@ concurrency:
 
 jobs:
   build:
-    name: 'Java 8'
-    runs-on: ubuntu-latest
+    name: Build
+    runs-on: ubuntu-24.04
     steps:
     - name: 'Checkout xalan-java'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
     - name: 'Set up JDK 8'
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v6
       with:
-        distribution: zulu
-        java-version: 8
+        distribution: temurin
+        java-version: "8"
     - name: 'Build Xalan jars'
       run: |
         ant jar
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
       name: 'Checkout xalan-test'
       with:
         repository: apache/xalan-test
         path: xalan-test
-        ref: master
+        # Before the Jan 2024 encoding tests. Those expect serializer
+        # surrogate fixes that are not on xalan-j_2_7_1_maint.
+        ref: dcf27a66acb3d089e08a36cd0abc1b905b072be6
     - name: 'Run xalan-test tests'
       working-directory: xalan-test
 # NOTE: "alltest" target includes conformance tests known not to run in Xalan,
@@ -50,6 +52,7 @@ jobs:
 # minus conf.xsltc since that one is currently throwing four known failures and
 # isn't set up to say "but that's not a regression".
       run: |
+        sed -i 's/<javac /<javac includeantruntime="false" /g' build.xml
         ant jar extensions.classes smoketest apitest -Dxalan.relpath=../ -Dparser.jar=../lib/endorsed/xercesImpl.jar -Dxml-apis.jar=../lib/endorsed/xml-apis.jar
 
 # ant fulldist is failing: in CI
