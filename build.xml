@@ -1097,7 +1097,7 @@ $Id$
     
     <!-- Ant ignores destdir arg if doclet is set, so must send to doclet in doclet subelement-->
     <javadoc
-         additionalparam="-breakiterator"
+         additionalparam="-breakiterator -Xdoclint:none"
          destdir="${build.apidocs}"
          public="true"
          sourcepath="${src.dir}"
@@ -1802,7 +1802,7 @@ $Id$
     
     <!-- Ant ignores destdir arg if doclet is set, so must send to doclet in doclet subelement-->
     <javadoc
-         additionalparam="-breakiterator"
+         additionalparam="-breakiterator -Xdoclint:none"
          destdir="${build.apidocs}"
          public="true"
          sourcepath="${src.dir}"
