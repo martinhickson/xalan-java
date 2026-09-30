@@ -61,6 +61,11 @@ $Id$
 
 <project name="Xalan" default="jar" basedir=".">
 
+  <!-- Do not put Ant's own runtime on the javac classpath. -->
+  <presetdef name="javac">
+    <javac includeantruntime="false"/>
+  </presetdef>
+
   <property name="name"                   value="xalan"/>
   <property name="year"                   value="2023"/>
   <property name="build.debug"            value="on"/>  
