@@ -291,8 +291,11 @@ jobs:
         run: |
           work="${RUNNER_TEMP}/xalan-central"
           rm -rf "$work"
-          mkdir -p "$work/classes"
+          mkdir -p "$work/classes" "$work/extra"
           unzip -q "build/${ARTIFACT_ID}-${RELEASE_VERSION}.jar" -d "$work/classes"
+          ant javadocs -Dimpl.version="${RELEASE_VERSION}"
+          jar cf "$work/extra/${ARTIFACT_ID}-${RELEASE_VERSION}-sources.jar" -C src .
+          jar cf "$work/extra/${ARTIFACT_ID}-${RELEASE_VERSION}-javadoc.jar" -C build/docs/apidocs .
           cat > "$work/pom.xml" << EOF
           <project xmlns="http://maven.apache.org/POM/4.0.0">
             <modelVersion>4.0.0</modelVersion>
@@ -322,9 +325,54 @@ jobs:
               <tag>${TAG_NAME}</tag>
             </scm>
             <build>
-              <sourceDirectory>${GITHUB_WORKSPACE}/src</sourceDirectory>
               <outputDirectory>${work}/classes</outputDirectory>
               <plugins>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-compiler-plugin</artifactId>
+                  <version>3.13.0</version>
+                  <configuration>
+                    <skip>true</skip>
+                  </configuration>
+                </plugin>
+                <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-jar-plugin</artifactId>
+                  <version>3.4.2</version>
+                  <configuration>
+                    <archive>
+                      <manifestFile>${work}/classes/META-INF/MANIFEST.MF</manifestFile>
+                    </archive>
+                  </configuration>
+                </plugin>
+                <plugin>
+                  <groupId>org.codehaus.mojo</groupId>
+                  <artifactId>build-helper-maven-plugin</artifactId>
+                  <version>3.6.0</version>
+                  <executions>
+                    <execution>
+                      <id>attach-sources-javadoc</id>
+                      <phase>package</phase>
+                      <goals>
+                        <goal>attach-artifact</goal>
+                      </goals>
+                      <configuration>
+                        <artifacts>
+                          <artifact>
+                            <file>${work}/extra/${ARTIFACT_ID}-${RELEASE_VERSION}-sources.jar</file>
+                            <type>jar</type>
+                            <classifier>sources</classifier>
+                          </artifact>
+                          <artifact>
+                            <file>${work}/extra/${ARTIFACT_ID}-${RELEASE_VERSION}-javadoc.jar</file>
+                            <type>jar</type>
+                            <classifier>javadoc</classifier>
+                          </artifact>
+                        </artifacts>
+                      </configuration>
+                    </execution>
+                  </executions>
+                </plugin>
                 <plugin>
                   <groupId>org.sonatype.central</groupId>
                   <artifactId>central-publishing-maven-plugin</artifactId>
@@ -340,12 +388,9 @@ jobs:
           </project>
           EOF
           cd "$work"
-          mvn -B -ntp -DskipTests package \
-            source:jar-no-fork javadoc:jar \
+          mvn -B -ntp package \
             org.apache.maven.plugins:maven-gpg-plugin:3.2.7:sign \
             org.sonatype.central:central-publishing-maven-plugin:0.7.0:publish \
-            -Dmaven.compiler.skip=true \
-            -Dmaven.javadoc.failOnError=false \
             -Dgpg.passphrase="${MAVEN_CENTRAL_GPG_PASSPHRASE}"
 
       - name: Prepare GitHub release notes
