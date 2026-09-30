@@ -12,13 +12,13 @@ permissions:
 jobs:
   build:
     name: ant jar (Java 8)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "8"
@@ -29,7 +29,7 @@ jobs:
         run: ant jar
 
       - name: Upload xalan.jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: xalan-jar
           path: build/xalan.jar
