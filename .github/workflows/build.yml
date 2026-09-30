@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: ant jar (Java 8)
+    name: Build
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
