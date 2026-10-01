@@ -26,11 +26,15 @@ jobs:
       - name: Build the bundled xalan.jar
         # Fails if lib/endorsed/xercesImpl.jar is missing. That jar is
         # required to compile IncrementalSAXSource_Xerces.
+        # ant jar also builds build/serializer.jar. The upstream dist
+        # ships that jar beside xalan.jar.
         run: ant jar
 
-      - name: Upload xalan.jar
+      - name: Upload jars
         uses: actions/upload-artifact@v7
         with:
-          name: xalan-jar
-          path: build/xalan.jar
+          name: xalan-jars
+          path: |
+            build/xalan.jar
+            build/serializer.jar
           if-no-files-found: error
