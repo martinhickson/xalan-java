@@ -110,7 +110,7 @@
                   <artifactId>bcel</artifactId>
                   <version>${bcel.version}</version>
                   <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                  <includes>org/apache/bcel/**,META-INF/maven/org.apache.bcel/**</includes>
+                  <includes>org/apache/bcel/**,META-INF/maven/org.apache.bcel/**,META-INF/LICENSE.txt,META-INF/NOTICE.txt</includes>
                 </artifactItem>
               </artifactItems>
             </configuration>
