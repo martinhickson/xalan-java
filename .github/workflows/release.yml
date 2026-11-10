@@ -13,13 +13,8 @@ on:
         required: true
         default: 'xalan-j_2_7_1_maint'
         type: string
-      run_tests:
-        description: 'Run smoketest and api tests before publishing'
-        required: false
-        default: true
-        type: boolean
       deploy_to_github_packages:
-        description: 'Publish to GitHub Packages (org.apache.xalan:xalan2 by default)'
+        description: 'Publish to GitHub Packages (org.apache.xalan:xalan by default)'
         required: false
         default: true
         type: boolean
@@ -31,7 +26,7 @@ on:
       artifact_id:
         description: 'Maven artifactId'
         required: false
-        default: 'xalan2'
+        default: 'xalan'
         type: string
       deploy_to_maven_central:
         description: 'Publish to Maven Central (io.github.martinhickson)'
@@ -108,31 +103,28 @@ jobs:
       - name: Set up JDK 8
         uses: actions/setup-java@v6
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: "8"
 
-      - name: Build the bundled jar
-        run: ant jar -Dimpl.version="${RELEASE_VERSION}"
-
-      - name: Checkout xalan-test
-        if: inputs.run_tests
-        uses: actions/checkout@v7
-        with:
-          repository: apache/xalan-test
-          path: xalan-test
-          # Before the Jan 2024 encoding tests. Those expect serializer
-          # surrogate fixes that are not on xalan-j_2_7_1_maint.
-          ref: dcf27a66acb3d089e08a36cd0abc1b905b072be6
-
-      - name: Run smoketest and api tests
-        if: inputs.run_tests
-        working-directory: xalan-test
+      - name: Build with Maven
         run: |
-          sed -i 's/<javac /<javac includeantruntime="false" /g' build.xml
-          ant jar extensions.classes smoketest apitest \
-            -Dxalan.relpath=../ \
-            -Dparser.jar=../lib/endorsed/xercesImpl.jar \
-            -Dxml-apis.jar=../lib/endorsed/xml-apis.jar
+          test -x "${JAVA_HOME}/bin/javac"
+          if ! "${JAVA_HOME}/bin/java" -XshowSettings:properties -version 2>&1 | grep -q 'java.vendor = BellSoft'; then
+            echo "::error::JAVA_HOME is not a BellSoft JDK"
+            exit 1
+          fi
+          export BELLSOFT_JDK8_HOME="${JAVA_HOME}"
+          echo "BELLSOFT_JDK8_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
+          mvn -B -ntp versions:set -DnewVersion="${RELEASE_VERSION}" -DgenerateBackupPoms=false
+          VERSION=$(mvn -B -ntp help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [ "$VERSION" != "${RELEASE_VERSION}" ]; then
+            echo "::error::Version mismatch. Expected ${RELEASE_VERSION}, got ${VERSION}"
+            exit 1
+          fi
+          mvn -B -ntp package -DskipTests
+          mkdir -p build
+          cp "xalan/target/xalan-${RELEASE_VERSION}.jar" build/xalan.jar
+          cp "serializer/target/serializer-${RELEASE_VERSION}.jar" build/serializer.jar
 
       - name: Check the manifest version
         run: |
@@ -164,7 +156,7 @@ jobs:
 
       - name: Commit and push version change
         run: |
-          git add build.xml
+          git add build.xml pom.xml serializer/pom.xml xalan/pom.xml
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -208,72 +200,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
 
-      - name: Write the Maven POMs
-        if: inputs.deploy_to_github_packages || inputs.deploy_to_maven_central
-        run: |
-          write_pom() {
-            local file="$1" group="$2" artifact="$3" name="$4" description="$5"
-            cat > "$file" << EOF
-          <project xmlns="http://maven.apache.org/POM/4.0.0">
-            <modelVersion>4.0.0</modelVersion>
-            <groupId>${group}</groupId>
-            <artifactId>${artifact}</artifactId>
-            <version>${RELEASE_VERSION}</version>
-            <name>${name}</name>
-            <description>${description}</description>
-            <url>https://github.com/martinhickson/xalan-java</url>
-            <licenses>
-              <license>
-                <name>The Apache Software License, Version 2.0</name>
-                <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-                <distribution>repo</distribution>
-              </license>
-            </licenses>
-            <scm>
-              <connection>scm:git:https://github.com/martinhickson/xalan-java.git</connection>
-              <developerConnection>scm:git:https://github.com/martinhickson/xalan-java.git</developerConnection>
-              <url>https://github.com/martinhickson/xalan-java</url>
-              <tag>${TAG_NAME}</tag>
-            </scm>
-          </project>
-          EOF
-          }
-          write_pom "build/${ARTIFACT_ID}-${RELEASE_VERSION}.pom" \
-            "${PACKAGES_GROUP_ID}" "${ARTIFACT_ID}" "Xalan-Java" \
-            "Bravura maintenance build of Apache Xalan-Java 2.7.3 with the XMLReaderManager leak fix."
-          write_pom "build/serializer-${RELEASE_VERSION}.pom" \
-            "${PACKAGES_GROUP_ID}" "serializer" "Xalan Java Serializer" \
-            "Bravura maintenance build of the Apache Xalan-Java 2.7.3 serializer."
-
       - name: Publish to GitHub Packages
         if: inputs.deploy_to_github_packages
         run: |
-          deploy_one() {
-            local artifact="$1" file="$2" pom="$3"
-            set +e
-            mvn -B -ntp deploy:deploy-file \
-              -Dfile="$file" \
-              -DpomFile="$pom" \
-              -DrepositoryId=github-packages \
-              -Durl="https://maven.pkg.github.com/${{ github.repository }}" \
-              > /tmp/deploy.log 2>&1
-            local code=$?
-            set -e
-            cat /tmp/deploy.log
-            if [ "$code" -ne 0 ]; then
-              if grep -Eqi '409|already exists|Conflict|cannot be updated' /tmp/deploy.log; then
-                echo "::warning::${artifact} ${RELEASE_VERSION} is already on GitHub Packages."
-              else
-                exit "$code"
-              fi
-            fi
-          }
-          deploy_one "${ARTIFACT_ID}" \
-            "build/${ARTIFACT_ID}-${RELEASE_VERSION}.jar" \
-            "build/${ARTIFACT_ID}-${RELEASE_VERSION}.pom"
-          deploy_one serializer \
-            "build/serializer-${RELEASE_VERSION}.jar" \
-            "build/serializer-${RELEASE_VERSION}.pom"
+          mvn -B -ntp deploy -DskipTests \
+            -DaltDeploymentRepository="github-packages::default::https://maven.pkg.github.com/${{ github.repository }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -319,13 +250,17 @@ jobs:
         env:
           MAVEN_CENTRAL_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_PASSPHRASE }}
         run: |
-          ant javadocs -Dimpl.version="${RELEASE_VERSION}"
-          ant serializer.javadocs -Dimpl.version="${RELEASE_VERSION}" -Dbuild.apidocs=build/docs/serializer-apidocs
+          export BELLSOFT_JDK8_HOME="${JAVA_HOME}"
+          mvn -B -ntp -pl serializer,xalan -DskipTests \
+            org.apache.maven.plugins:maven-javadoc-plugin:3.6.3:jar \
+            org.apache.maven.plugins:maven-source-plugin:3.3.1:jar \
+            -DadditionalJOption=-Xdoclint:none \
+            -Ddoclint=none
           mkdir -p build/central-extra
-          jar cf "build/central-extra/${ARTIFACT_ID}-sources.jar" -C src .
-          jar cf "build/central-extra/${ARTIFACT_ID}-javadoc.jar" -C build/docs/apidocs .
-          jar cf "build/central-extra/serializer-sources.jar" -C src org/apache/xml/serializer
-          jar cf "build/central-extra/serializer-javadoc.jar" -C build/docs/serializer-apidocs .
+          cp "xalan/target/xalan-${RELEASE_VERSION}-sources.jar" "build/central-extra/${ARTIFACT_ID}-sources.jar"
+          cp "xalan/target/xalan-${RELEASE_VERSION}-javadoc.jar" "build/central-extra/${ARTIFACT_ID}-javadoc.jar"
+          cp "serializer/target/serializer-${RELEASE_VERSION}-sources.jar" build/central-extra/serializer-sources.jar
+          cp "serializer/target/serializer-${RELEASE_VERSION}-javadoc.jar" build/central-extra/serializer-javadoc.jar
 
           publish_to_central() {
             local artifact_id="$1" jar_file="$2" sources_jar="$3" javadoc_jar="$4" pom_name="$5" pom_description="$6"
