@@ -51,8 +51,8 @@
       <artifactId>regexp</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.github.vbmacher</groupId>
-      <artifactId>java-cup-runtime</artifactId>
+      <groupId>edu.princeton.cup</groupId>
+      <artifactId>java-cup</artifactId>
     </dependency>
   </dependencies>
 
@@ -90,19 +90,9 @@
               <outputDirectory>${project.build.directory}/codegen</outputDirectory>
               <artifactItems>
                 <artifactItem>
-                  <groupId>com.github.vbmacher</groupId>
+                  <groupId>edu.princeton.cup</groupId>
                   <artifactId>java-cup</artifactId>
                   <version>${java-cup.version}</version>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>com.github.vbmacher</groupId>
-                  <artifactId>java-cup-runtime</artifactId>
-                  <version>${java-cup.version}</version>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>net.sourceforge.maven-jlex</groupId>
-                  <artifactId>maven-jlex-plugin</artifactId>
-                  <version>1.0</version>
                 </artifactItem>
               </artifactItems>
             </configuration>

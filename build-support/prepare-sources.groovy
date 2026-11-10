@@ -111,16 +111,15 @@ if (command == 'generate-serializer') {
     def compilerOut = new File(generated, 'org/apache/xalan/xsltc/compiler')
     compilerOut.mkdirs()
     def codegen = new File(moduleTarget, 'codegen')
-    def cupJar = codegen.listFiles().find { it.name.startsWith('java-cup-') && !it.name.startsWith('java-cup-runtime-') }
-    def cupRuntimeJar = codegen.listFiles().find { it.name.startsWith('java-cup-runtime-') }
-    def jlexJar = codegen.listFiles().find { it.name.contains('jlex') || it.name.contains('JLex') }
-    if (!cupJar || !cupRuntimeJar || !jlexJar) {
-        throw new IllegalStateException("Maven codegen jars are missing from ${codegen}")
+    def cupJar = codegen.listFiles().find { it.name.startsWith('java-cup-') && it.name.endsWith('.jar') }
+    def jlexJar = new File(repo, 'tools/JLex.jar')
+    if (!cupJar?.isFile() || !jlexJar.isFile()) {
+        throw new IllegalStateException("CUP or tools/JLex.jar is missing")
     }
     run([
             javaBin.absolutePath,
             '-cp',
-            cupJar.absolutePath + File.pathSeparator + cupRuntimeJar.absolutePath,
+            cupJar.absolutePath,
             'java_cup.Main',
             '-parser', 'XPathParser',
             '-expect', '0',
@@ -138,17 +137,19 @@ if (command == 'generate-serializer') {
             new File(repo, 'src/org/apache/xalan/xsltc/compiler/xpath.lex').toPath(),
             lexCopy.toPath(),
             StandardCopyOption.REPLACE_EXISTING)
-    def lexer = new File(compilerOut, 'XPathLexer.java')
     run([
             javaBin.absolutePath,
             '-cp', jlexJar.absolutePath,
-            'jlex.Main',
-            lexCopy.absolutePath,
-            lexer.absolutePath
+            'JLex.Main',
+            '-static',
+            lexCopy.absolutePath
     ], compilerOut)
-    if (!lexer.isFile()) {
-        throw new IllegalStateException("JLex did not write XPathLexer.java")
+    def generatedLexer = new File(compilerOut, 'xpath.lex.java')
+    def lexer = new File(compilerOut, 'XPathLexer.java')
+    if (!generatedLexer.isFile()) {
+        throw new IllegalStateException("JLex did not write xpath.lex.java")
     }
+    Files.move(generatedLexer.toPath(), lexer.toPath(), StandardCopyOption.REPLACE_EXISTING)
     lexCopy.delete()
 } else {
     throw new IllegalArgumentException("Unknown command ${command}")

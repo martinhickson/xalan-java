@@ -42,7 +42,7 @@
     <xml-apis.version>1.4.01</xml-apis.version>
     <bcel.version>6.7.0</bcel.version>
     <regexp.version>1.3</regexp.version>
-    <java-cup.version>11b-20160615-3</java-cup.version>
+    <java-cup.version>10k</java-cup.version>
   </properties>
 
   <dependencyManagement>
@@ -68,8 +68,8 @@
         <version>${regexp.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.github.vbmacher</groupId>
-        <artifactId>java-cup-runtime</artifactId>
+        <groupId>edu.princeton.cup</groupId>
+        <artifactId>java-cup</artifactId>
         <version>${java-cup.version}</version>
       </dependency>
     </dependencies>
