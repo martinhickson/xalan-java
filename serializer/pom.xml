@@ -7,12 +7,12 @@
   <parent>
     <groupId>org.apache.xalan</groupId>
     <artifactId>xalan-parent</artifactId>
-    <version>2.7.3.3-bravura-8</version>
+    <version>2.7.3.12-bravura-12</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <artifactId>serializer</artifactId>
-  <version>2.7.3.3-bravura-8</version>
+  <version>2.7.3.12-bravura-12</version>
   <name>Xalan Java Serializer</name>
   <description>Bravura maintenance build of the Apache Xalan-Java 2.7.3 serializer.</description>
   <url>https://github.com/martinhickson/xalan-java</url>
