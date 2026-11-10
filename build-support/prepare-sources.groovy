@@ -1,11 +1,28 @@
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-def command = args[0]
-def repo = new File(args[1]).canonicalFile
-def moduleTarget = new File(args[2]).canonicalFile
-def version = args[3]
-def jdkHome = new File(args[4]).canonicalFile
+def command
+def repo
+def moduleTarget
+def version
+def jdkHome
+if (binding.hasVariable('xalanPrepareCommand')) {
+    command = xalanPrepareCommand
+    repo = project.basedir.parentFile.canonicalFile
+    moduleTarget = new File(project.build.directory).canonicalFile
+    version = project.version
+    def home = System.getenv('BELLSOFT_JDK8_HOME')
+    if (!home) {
+        throw new IllegalStateException('Set BELLSOFT_JDK8_HOME to a BellSoft Liberica JDK 8 Standard installation')
+    }
+    jdkHome = new File(home).canonicalFile
+} else {
+    command = args[0]
+    repo = new File(args[1]).canonicalFile
+    moduleTarget = new File(args[2]).canonicalFile
+    version = args[3]
+    jdkHome = new File(args[4]).canonicalFile
+}
 def javaBin = new File(jdkHome, 'bin/java')
 def jarBin = new File(jdkHome, 'bin/jar')
 def javacBin = new File(jdkHome, 'bin/javac')
