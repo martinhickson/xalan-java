@@ -170,6 +170,10 @@ evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
             <exclude>org/apache/xml/serializer/**/*.java</exclude>
             <exclude>org/apache/xalan/xsltc/util/JavaCupRedirect.java</exclude>
           </excludes>
+          <compilerArgs>
+            <arg>-nowarn</arg>
+            <arg>-implicit:none</arg>
+          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>
@@ -177,6 +181,9 @@ evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.4.2</version>
         <configuration>
+          <excludes>
+            <exclude>org/apache/xml/serializer/**</exclude>
+          </excludes>
           <archive>
             <manifestFile>${project.build.directory}/MANIFEST.MF</manifestFile>
             <addMavenDescriptor>false</addMavenDescriptor>
