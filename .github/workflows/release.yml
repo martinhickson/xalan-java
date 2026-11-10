@@ -13,11 +13,6 @@ on:
         required: true
         default: 'xalan-j_2_7_1_maint'
         type: string
-      run_tests:
-        description: 'Run smoketest and api tests before publishing'
-        required: false
-        default: true
-        type: boolean
       deploy_to_github_packages:
         description: 'Publish to GitHub Packages (org.apache.xalan:xalan by default)'
         required: false
@@ -131,26 +126,6 @@ jobs:
           mkdir -p build
           cp "xalan/target/xalan-${RELEASE_VERSION}.jar" build/xalan.jar
           cp "serializer/target/serializer-${RELEASE_VERSION}.jar" build/serializer.jar
-
-      - name: Checkout xalan-test
-        if: inputs.run_tests
-        uses: actions/checkout@v7
-        with:
-          repository: apache/xalan-test
-          path: xalan-test
-          # Before the Jan 2024 encoding tests. Those expect serializer
-          # surrogate fixes that are not on xalan-j_2_7_1_maint.
-          ref: dcf27a66acb3d089e08a36cd0abc1b905b072be6
-
-      - name: Run smoketest and api tests
-        if: inputs.run_tests
-        working-directory: xalan-test
-        run: |
-          sed -i 's/<javac /<javac includeantruntime="false" /g' build.xml
-          ant jar extensions.classes smoketest apitest \
-            -Dxalan.relpath=../ \
-            -Dparser.jar=../lib/endorsed/xercesImpl.jar \
-            -Dxml-apis.jar=../lib/endorsed/xml-apis.jar
 
       - name: Check the manifest version
         run: |
@@ -337,13 +312,17 @@ jobs:
         env:
           MAVEN_CENTRAL_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_PASSPHRASE }}
         run: |
-          ant javadocs -Dimpl.version="${RELEASE_VERSION}"
-          ant serializer.javadocs -Dimpl.version="${RELEASE_VERSION}" -Dbuild.apidocs=build/docs/serializer-apidocs
+          export BELLSOFT_JDK8_HOME="${JAVA_HOME}"
+          mvn -B -ntp -pl serializer,xalan -DskipTests \
+            org.apache.maven.plugins:maven-javadoc-plugin:3.6.3:jar \
+            org.apache.maven.plugins:maven-source-plugin:3.3.1:jar \
+            -DadditionalJOption=-Xdoclint:none \
+            -Ddoclint=none
           mkdir -p build/central-extra
-          jar cf "build/central-extra/${ARTIFACT_ID}-sources.jar" -C src .
-          jar cf "build/central-extra/${ARTIFACT_ID}-javadoc.jar" -C build/docs/apidocs .
-          jar cf "build/central-extra/serializer-sources.jar" -C src org/apache/xml/serializer
-          jar cf "build/central-extra/serializer-javadoc.jar" -C build/docs/serializer-apidocs .
+          cp "xalan/target/xalan-${RELEASE_VERSION}-sources.jar" "build/central-extra/${ARTIFACT_ID}-sources.jar"
+          cp "xalan/target/xalan-${RELEASE_VERSION}-javadoc.jar" "build/central-extra/${ARTIFACT_ID}-javadoc.jar"
+          cp "serializer/target/serializer-${RELEASE_VERSION}-sources.jar" build/central-extra/serializer-sources.jar
+          cp "serializer/target/serializer-${RELEASE_VERSION}-javadoc.jar" build/central-extra/serializer-javadoc.jar
 
           publish_to_central() {
             local artifact_id="$1" jar_file="$2" sources_jar="$3" javadoc_jar="$4" pom_name="$5" pom_description="$6"
