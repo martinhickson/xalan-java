@@ -151,6 +151,37 @@ if (command == 'generate-serializer') {
     }
     Files.move(generatedLexer.toPath(), lexer.toPath(), StandardCopyOption.REPLACE_EXISTING)
     lexCopy.delete()
+} else if (command == 'bundle-xalan') {
+    def classes = new File(moduleTarget, 'classes')
+    if (!classes.isDirectory()) {
+        throw new IllegalStateException("Compiled classes are missing: ${classes}")
+    }
+    def unpack = { File jar, List<String> prefixes ->
+        if (!jar.isFile()) {
+            throw new IllegalStateException("Bundle jar is missing: ${jar}")
+        }
+        def zip = new java.util.zip.ZipFile(jar)
+        try {
+            zip.entries().each { entry ->
+                if (entry.directory) {
+                    return
+                }
+                def name = entry.name
+                if (!prefixes.any { name.startsWith(it) }) {
+                    return
+                }
+                def out = new File(classes, name)
+                out.parentFile.mkdirs()
+                out.withOutputStream { output ->
+                    zip.getInputStream(entry).withCloseable { input -> output << input }
+                }
+            }
+        } finally {
+            zip.close()
+        }
+    }
+    unpack(new File(repo, 'lib/regexp.jar'), ['org/apache/regexp/'])
+    unpack(new File(repo, 'lib/runtime.jar'), ['java_cup/runtime/'])
 } else {
     throw new IllegalArgumentException("Unknown command ${command}")
 }
