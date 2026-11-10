@@ -94,19 +94,11 @@ jobs:
           sed -i -E \
             's|(<property name="impl.version"[[:space:]]+value=")[^"]*(")|\1'"${RELEASE_VERSION}"'\2|' \
             build.xml
-          sed -i -E \
-            's|(<revision>)[^<]*(</revision>)|\1'"${RELEASE_VERSION}"'\2|' \
-            pom.xml
           if ! grep -q "name=\"impl.version\".*value=\"${RELEASE_VERSION}\"" build.xml; then
             echo "::error::impl.version was not updated in build.xml"
             exit 1
           fi
-          if ! grep -q "<revision>${RELEASE_VERSION}</revision>" pom.xml; then
-            echo "::error::revision was not updated in pom.xml"
-            exit 1
-          fi
           grep 'name="impl.version"' build.xml
-          grep '<revision>' pom.xml
 
       - name: Set up JDK 8
         uses: actions/setup-java@v6
@@ -122,6 +114,13 @@ jobs:
             exit 1
           fi
           export BELLSOFT_JDK8_HOME="${JAVA_HOME}"
+          echo "BELLSOFT_JDK8_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
+          mvn -B -ntp versions:set -DnewVersion="${RELEASE_VERSION}" -DgenerateBackupPoms=false
+          VERSION=$(mvn -B -ntp help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [ "$VERSION" != "${RELEASE_VERSION}" ]; then
+            echo "::error::Version mismatch. Expected ${RELEASE_VERSION}, got ${VERSION}"
+            exit 1
+          fi
           mvn -B -ntp package -DskipTests
           mkdir -p build
           cp "xalan/target/xalan-${RELEASE_VERSION}.jar" build/xalan.jar
@@ -157,7 +156,7 @@ jobs:
 
       - name: Commit and push version change
         run: |
-          git add build.xml pom.xml
+          git add build.xml pom.xml serializer/pom.xml xalan/pom.xml
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -201,72 +200,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
 
-      - name: Write the Maven POMs
-        if: inputs.deploy_to_github_packages || inputs.deploy_to_maven_central
-        run: |
-          write_pom() {
-            local file="$1" group="$2" artifact="$3" name="$4" description="$5"
-            cat > "$file" << EOF
-          <project xmlns="http://maven.apache.org/POM/4.0.0">
-            <modelVersion>4.0.0</modelVersion>
-            <groupId>${group}</groupId>
-            <artifactId>${artifact}</artifactId>
-            <version>${RELEASE_VERSION}</version>
-            <name>${name}</name>
-            <description>${description}</description>
-            <url>https://github.com/martinhickson/xalan-java</url>
-            <licenses>
-              <license>
-                <name>The Apache Software License, Version 2.0</name>
-                <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-                <distribution>repo</distribution>
-              </license>
-            </licenses>
-            <scm>
-              <connection>scm:git:https://github.com/martinhickson/xalan-java.git</connection>
-              <developerConnection>scm:git:https://github.com/martinhickson/xalan-java.git</developerConnection>
-              <url>https://github.com/martinhickson/xalan-java</url>
-              <tag>${TAG_NAME}</tag>
-            </scm>
-          </project>
-          EOF
-          }
-          write_pom "build/${ARTIFACT_ID}-${RELEASE_VERSION}.pom" \
-            "${PACKAGES_GROUP_ID}" "${ARTIFACT_ID}" "Xalan-Java" \
-            "Bravura maintenance build of Apache Xalan-Java 2.7.3 with the XMLReaderManager leak fix."
-          write_pom "build/serializer-${RELEASE_VERSION}.pom" \
-            "${PACKAGES_GROUP_ID}" "serializer" "Xalan Java Serializer" \
-            "Bravura maintenance build of the Apache Xalan-Java 2.7.3 serializer."
-
       - name: Publish to GitHub Packages
         if: inputs.deploy_to_github_packages
         run: |
-          deploy_one() {
-            local artifact="$1" file="$2" pom="$3"
-            set +e
-            mvn -B -ntp deploy:deploy-file \
-              -Dfile="$file" \
-              -DpomFile="$pom" \
-              -DrepositoryId=github-packages \
-              -Durl="https://maven.pkg.github.com/${{ github.repository }}" \
-              > /tmp/deploy.log 2>&1
-            local code=$?
-            set -e
-            cat /tmp/deploy.log
-            if [ "$code" -ne 0 ]; then
-              if grep -Eqi '409|already exists|Conflict|cannot be updated' /tmp/deploy.log; then
-                echo "::warning::${artifact} ${RELEASE_VERSION} is already on GitHub Packages."
-              else
-                exit "$code"
-              fi
-            fi
-          }
-          deploy_one "${ARTIFACT_ID}" \
-            "build/${ARTIFACT_ID}-${RELEASE_VERSION}.jar" \
-            "build/${ARTIFACT_ID}-${RELEASE_VERSION}.pom"
-          deploy_one serializer \
-            "build/serializer-${RELEASE_VERSION}.jar" \
-            "build/serializer-${RELEASE_VERSION}.pom"
+          mvn -B -ntp deploy -DskipTests \
+            -DaltDeploymentRepository="github-packages::default::https://maven.pkg.github.com/${{ github.repository }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
