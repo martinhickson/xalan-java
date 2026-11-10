@@ -19,7 +19,7 @@ on:
         default: true
         type: boolean
       deploy_to_github_packages:
-        description: 'Publish to GitHub Packages (org.apache.xalan:xalan2 by default)'
+        description: 'Publish to GitHub Packages (org.apache.xalan:xalan by default)'
         required: false
         default: true
         type: boolean
@@ -31,7 +31,7 @@ on:
       artifact_id:
         description: 'Maven artifactId'
         required: false
-        default: 'xalan2'
+        default: 'xalan'
         type: string
       deploy_to_maven_central:
         description: 'Publish to Maven Central (io.github.martinhickson)'
@@ -99,20 +99,38 @@ jobs:
           sed -i -E \
             's|(<property name="impl.version"[[:space:]]+value=")[^"]*(")|\1'"${RELEASE_VERSION}"'\2|' \
             build.xml
+          sed -i -E \
+            's|(<revision>)[^<]*(</revision>)|\1'"${RELEASE_VERSION}"'\2|' \
+            pom.xml
           if ! grep -q "name=\"impl.version\".*value=\"${RELEASE_VERSION}\"" build.xml; then
             echo "::error::impl.version was not updated in build.xml"
             exit 1
           fi
+          if ! grep -q "<revision>${RELEASE_VERSION}</revision>" pom.xml; then
+            echo "::error::revision was not updated in pom.xml"
+            exit 1
+          fi
           grep 'name="impl.version"' build.xml
+          grep '<revision>' pom.xml
 
       - name: Set up JDK 8
         uses: actions/setup-java@v6
         with:
-          distribution: temurin
+          distribution: liberica
           java-version: "8"
 
-      - name: Build the bundled jar
-        run: ant jar -Dimpl.version="${RELEASE_VERSION}"
+      - name: Build with Maven
+        run: |
+          test -x "${JAVA_HOME}/bin/javac"
+          if ! "${JAVA_HOME}/bin/java" -XshowSettings:properties -version 2>&1 | grep -q 'java.vendor = BellSoft'; then
+            echo "::error::JAVA_HOME is not a BellSoft JDK"
+            exit 1
+          fi
+          export BELLSOFT_JDK8_HOME="${JAVA_HOME}"
+          mvn -B -ntp package -DskipTests
+          mkdir -p build
+          cp "xalan/target/xalan-${RELEASE_VERSION}.jar" build/xalan.jar
+          cp "serializer/target/serializer-${RELEASE_VERSION}.jar" build/serializer.jar
 
       - name: Checkout xalan-test
         if: inputs.run_tests
@@ -164,7 +182,7 @@ jobs:
 
       - name: Commit and push version change
         run: |
-          git add build.xml
+          git add build.xml pom.xml
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else

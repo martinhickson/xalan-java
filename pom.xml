@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.apache.xalan</groupId>
+  <artifactId>xalan-parent</artifactId>
+  <version>${revision}</version>
+  <packaging>pom</packaging>
+
+  <name>Xalan-Java</name>
+  <description>Bravura maintenance build of Apache Xalan-Java 2.7.3 with the XMLReaderManager leak fix.</description>
+  <url>https://github.com/martinhickson/xalan-java</url>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:https://github.com/martinhickson/xalan-java.git</connection>
+    <developerConnection>scm:git:https://github.com/martinhickson/xalan-java.git</developerConnection>
+    <url>https://github.com/martinhickson/xalan-java</url>
+    <tag>v2.7.3.3-bravura-8-release</tag>
+  </scm>
+
+  <modules>
+    <module>serializer</module>
+    <module>xalan</module>
+  </modules>
+
+  <properties>
+    <revision>2.7.3.3-bravura-8</revision>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <bellsoft.jdk8.home>${env.BELLSOFT_JDK8_HOME}</bellsoft.jdk8.home>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>bellsoft-jdk8</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireEnvironmentVariable>
+                  <variableName>BELLSOFT_JDK8_HOME</variableName>
+                  <message>Set BELLSOFT_JDK8_HOME to a BellSoft Liberica JDK 8 Standard installation.</message>
+                </requireEnvironmentVariable>
+                <requireFilesExist>
+                  <files>
+                    <file>${env.BELLSOFT_JDK8_HOME}/bin/javac</file>
+                  </files>
+                </requireFilesExist>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <fork>true</fork>
+          <executable>${bellsoft.jdk8.home}/bin/javac</executable>
+          <source>1.8</source>
+          <target>1.8</target>
+          <encoding>UTF-8</encoding>
+          <compilerArgs>
+            <arg>-nowarn</arg>
+            <arg>-Xbootclasspath/p:${project.basedir}/../lib/endorsed/xml-apis.jar${path.separator}${project.basedir}/../lib/endorsed/xercesImpl.jar</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

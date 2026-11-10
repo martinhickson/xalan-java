@@ -1,5 +1,8 @@
 /bin/
 /build/
+/serializer/target/
+/xalan/target/
+.flattened-pom.xml
 /classes/
 /.idea/
 *.iml
