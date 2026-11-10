@@ -97,6 +97,24 @@
               </artifactItems>
             </configuration>
           </execution>
+          <execution>
+            <id>unpack-bcel</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.apache.bcel</groupId>
+                  <artifactId>bcel</artifactId>
+                  <version>${bcel.version}</version>
+                  <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                  <includes>org/apache/bcel/**,META-INF/maven/org.apache.bcel/**</includes>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -121,6 +139,21 @@
               <scripts>
                 <script><![CDATA[
 xalanPrepareCommand = 'generate-xalan'
+evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
+]]></script>
+              </scripts>
+            </configuration>
+          </execution>
+          <execution>
+            <id>bundle-vendored-classes</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <scripts>
+                <script><![CDATA[
+xalanPrepareCommand = 'bundle-xalan'
 evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
 ]]></script>
               </scripts>
