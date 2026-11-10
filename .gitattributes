@@ -16,3 +16,17 @@
 # Windows expects CRLF always
 *.bat    text eol=crlf
 *.cmd    text eol=crlf
+
+# Official xalan:xalan:2.7.3 ships these resources with CRLF.
+src/META-INF/services/javax.xml.transform.TransformerFactory text eol=crlf
+src/META-INF/services/org.apache.xalan.extensions.bsf.BSFManager text eol=crlf
+src/META-INF/services/org.apache.xml.dtm.DTMManager text eol=crlf
+src/trax/trax.properties text eol=crlf
+src/org/apache/xalan/res/XSLTInfo.properties text eol=crlf
+src/org/apache/xml/serializer/Encodings.properties text eol=crlf
+src/org/apache/xml/serializer/HTMLEntities.properties text eol=crlf
+src/org/apache/xml/serializer/XMLEntities.properties text eol=crlf
+src/org/apache/xml/serializer/output_html.properties text eol=crlf
+src/org/apache/xml/serializer/output_text.properties text eol=crlf
+src/org/apache/xml/serializer/output_unknown.properties text eol=crlf
+src/org/apache/xml/serializer/output_xml.properties text eol=crlf
