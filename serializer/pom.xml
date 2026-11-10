@@ -27,6 +27,13 @@
     <maven.deploy.skip>false</maven.deploy.skip>
   </properties>
 
+  <dependencies>
+    <dependency>
+      <groupId>xml-apis</groupId>
+      <artifactId>xml-apis</artifactId>
+    </dependency>
+  </dependencies>
+
   <build>
     <sourceDirectory>${project.basedir}/../src</sourceDirectory>
     <resources>

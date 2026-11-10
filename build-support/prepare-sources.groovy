@@ -24,7 +24,6 @@ if (binding.hasVariable('xalanPrepareCommand')) {
     jdkHome = new File(args[4]).canonicalFile
 }
 def javaBin = new File(jdkHome, 'bin/java')
-def jarBin = new File(jdkHome, 'bin/jar')
 def javacBin = new File(jdkHome, 'bin/javac')
 
 if (!javacBin.isFile()) {
@@ -111,10 +110,17 @@ if (command == 'generate-serializer') {
 
     def compilerOut = new File(generated, 'org/apache/xalan/xsltc/compiler')
     compilerOut.mkdirs()
+    def codegen = new File(moduleTarget, 'codegen')
+    def cupJar = codegen.listFiles().find { it.name.startsWith('java-cup-') && !it.name.startsWith('java-cup-runtime-') }
+    def cupRuntimeJar = codegen.listFiles().find { it.name.startsWith('java-cup-runtime-') }
+    def jlexJar = codegen.listFiles().find { it.name.contains('jlex') || it.name.contains('JLex') }
+    if (!cupJar || !cupRuntimeJar || !jlexJar) {
+        throw new IllegalStateException("Maven codegen jars are missing from ${codegen}")
+    }
     run([
             javaBin.absolutePath,
             '-cp',
-            new File(repo, 'tools/java_cup.jar').absolutePath + File.pathSeparator + new File(repo, 'lib/runtime.jar').absolutePath,
+            cupJar.absolutePath + File.pathSeparator + cupRuntimeJar.absolutePath,
             'java_cup.Main',
             '-parser', 'XPathParser',
             '-expect', '0',
@@ -132,56 +138,18 @@ if (command == 'generate-serializer') {
             new File(repo, 'src/org/apache/xalan/xsltc/compiler/xpath.lex').toPath(),
             lexCopy.toPath(),
             StandardCopyOption.REPLACE_EXISTING)
+    def lexer = new File(compilerOut, 'XPathLexer.java')
     run([
             javaBin.absolutePath,
-            '-cp', new File(repo, 'tools/JLex.jar').absolutePath,
-            'JLex.Main',
-            '-static',
-            lexCopy.absolutePath
+            '-cp', jlexJar.absolutePath,
+            'jlex.Main',
+            lexCopy.absolutePath,
+            lexer.absolutePath
     ], compilerOut)
-    def produced = new File(compilerOut, 'xpath.lex.java')
-    def lexer = new File(compilerOut, 'XPathLexer.java')
-    if (!produced.isFile() || !produced.renameTo(lexer)) {
+    if (!lexer.isFile()) {
         throw new IllegalStateException("JLex did not write XPathLexer.java")
     }
     lexCopy.delete()
-
-    def compileExt = new File(moduleTarget, 'compile-ext')
-    compileExt.mkdirs()
-    ['lib/bcel-6.7.0.jar', 'lib/runtime.jar', 'lib/regexp.jar', 'tools/java_cup.jar', 'tools/JLex.jar'].each { relative ->
-        def source = new File(repo, relative)
-        Files.copy(source.toPath(), new File(compileExt, source.name).toPath(), StandardCopyOption.REPLACE_EXISTING)
-    }
-    def serializerJar = new File(repo, "serializer/target/serializer-${version}.jar")
-    def serializerForCompile = new File(compileExt, 'serializer.jar')
-    if (serializerJar.isFile()) {
-        Files.copy(serializerJar.toPath(), serializerForCompile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-    } else {
-        def classes = new File(repo, 'serializer/target/classes')
-        if (!classes.isDirectory()) {
-            throw new IllegalStateException('Build the serializer module before xalan')
-        }
-        run([jarBin.absolutePath, 'cf', serializerForCompile.absolutePath, '-C', classes.absolutePath, '.'], repo)
-    }
-} else if (command == 'unpack-xalan') {
-    def classes = new File(moduleTarget, 'classes')
-    ['lib/bcel-6.7.0.jar', 'lib/runtime.jar', 'lib/regexp.jar'].each { relative ->
-        def zip = new java.util.zip.ZipFile(new File(repo, relative))
-        try {
-            zip.entries().each { entry ->
-                if (entry.directory || entry.name == 'META-INF/MANIFEST.MF') {
-                    return
-                }
-                def out = new File(classes, entry.name)
-                out.parentFile.mkdirs()
-                zip.getInputStream(entry).withCloseable { input ->
-                    Files.copy(input, out.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                }
-            }
-        } finally {
-            zip.close()
-        }
-    }
 } else {
     throw new IllegalArgumentException("Unknown command ${command}")
 }

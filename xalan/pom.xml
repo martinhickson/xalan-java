@@ -27,6 +27,34 @@
     <maven.deploy.skip>false</maven.deploy.skip>
   </properties>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.xalan</groupId>
+      <artifactId>serializer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>xerces</groupId>
+      <artifactId>xercesImpl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>xml-apis</groupId>
+      <artifactId>xml-apis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.bcel</groupId>
+      <artifactId>bcel</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>regexp</groupId>
+      <artifactId>regexp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.vbmacher</groupId>
+      <artifactId>java-cup-runtime</artifactId>
+    </dependency>
+  </dependencies>
+
   <build>
     <sourceDirectory>${project.basedir}/../src</sourceDirectory>
     <resources>
@@ -46,6 +74,40 @@
       </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.3.0</version>
+        <executions>
+          <execution>
+            <id>copy-codegen-tools</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/codegen</outputDirectory>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.github.vbmacher</groupId>
+                  <artifactId>java-cup</artifactId>
+                  <version>${java-cup.version}</version>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>com.github.vbmacher</groupId>
+                  <artifactId>java-cup-runtime</artifactId>
+                  <version>${java-cup.version}</version>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>net.sourceforge.maven-jlex</groupId>
+                  <artifactId>maven-jlex-plugin</artifactId>
+                  <version>1.0</version>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.gmavenplus</groupId>
         <artifactId>gmavenplus-plugin</artifactId>
@@ -68,21 +130,6 @@
               <scripts>
                 <script><![CDATA[
 xalanPrepareCommand = 'generate-xalan'
-evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
-]]></script>
-              </scripts>
-            </configuration>
-          </execution>
-          <execution>
-            <id>unpack-xsltc-support-jars</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>execute</goal>
-            </goals>
-            <configuration>
-              <scripts>
-                <script><![CDATA[
-xalanPrepareCommand = 'unpack-xalan'
 evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
 ]]></script>
               </scripts>
@@ -122,10 +169,6 @@ evaluate(new File(project.basedir, '../build-support/prepare-sources.groovy'))
             <exclude>org/apache/xml/serializer/**/*.java</exclude>
             <exclude>org/apache/xalan/xsltc/util/JavaCupRedirect.java</exclude>
           </excludes>
-          <compilerArgs combine.children="append">
-            <arg>-extdirs</arg>
-            <arg>${project.build.directory}/compile-ext</arg>
-          </compilerArgs>
         </configuration>
       </plugin>
       <plugin>
