@@ -19,14 +19,14 @@ on:
         default: true
         type: boolean
       deploy_to_github_packages:
-        description: 'Publish to GitHub Packages (xalan:xalan2 by default)'
+        description: 'Publish to GitHub Packages (org.apache.xalan:xalan2 by default)'
         required: false
         default: true
         type: boolean
       packages_group_id:
         description: 'Maven groupId for GitHub Packages'
         required: false
-        default: 'xalan'
+        default: 'org.apache.xalan'
         type: string
       artifact_id:
         description: 'Maven artifactId'
