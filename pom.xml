@@ -51,6 +51,7 @@
         <groupId>xerces</groupId>
         <artifactId>xercesImpl</artifactId>
         <version>${xerces.version}</version>
+        <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>xml-apis</groupId>
